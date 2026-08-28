@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   ShieldCheck, 
   Activity, 
@@ -9,17 +9,30 @@ import {
   List, 
   Server, 
   Key, 
-  Radio 
+  Radio,
+  User,
+  LogOut,
+  PhoneCall
 } from 'lucide-react';
 import { useGlobalRisk } from '../hooks/useGlobalRisk';
+import { useAuth } from '../context/AuthContext';
+import { useGlobalCall } from '../context/GlobalCallContext';
 
 export const Header = () => {
+  const navigate = useNavigate();
   const { scenario, riskScore, connectionStatus, updateScenario } = useGlobalRisk();
+  const { currentUser, logout } = useAuth();
+  const { activeCall, isCallActive } = useGlobalCall();
 
   const getScenarioBadgeStyle = () => {
     if (scenario === 'HIGH') return 'badge-high';
     if (scenario === 'MEDIUM') return 'badge-medium';
     return 'badge-low';
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (
@@ -37,6 +50,33 @@ export const Header = () => {
         </div>
 
         <div className="header-status-bar">
+          {/* User Profile Pill */}
+          {currentUser && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#1e293b', padding: '0.2rem 0.6rem', borderRadius: '20px', border: '1px solid #334155' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0d9488', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '700' }}>
+                {currentUser.full_name?.charAt(0) || 'U'}
+              </div>
+              <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#fff' }}>
+                {currentUser.full_name}
+              </span>
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.1rem 0.2rem', display: 'flex', alignItems: 'center' }}
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          )}
+
+          {/* Active Call Badge */}
+          {isCallActive && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#14532d', color: '#86efac', padding: '0.2rem 0.6rem', borderRadius: '4px', border: '1px solid #22c55e', fontSize: '0.72rem', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
+              <PhoneCall size={12} className="animate-pulse" />
+              <span>ACTIVE CALL: {activeCall?.call_id}</span>
+            </div>
+          )}
+
           <div className="status-indicator">
             <Radio size={14} className="animate-pulse" style={{ color: connectionStatus === 'CONNECTED' ? '#22c55e' : '#f59e0b' }} />
             <span>SUPABASE REALTIME:</span>
