@@ -32,9 +32,11 @@ export const SCENARIOS = {
 
 /**
  * Fetch current system2_global_risk row (id = 1) from Supabase
+ * Strictly queries database row id=1. No local storage or BroadcastChannel.
  */
 export async function fetchCurrentGlobalRisk() {
   if (!isSupabaseConfigured || !supabase) {
+    console.error('[GLOBAL-RISK ERROR] Cannot fetch: Supabase unconfigured');
     return null;
   }
 
@@ -46,22 +48,14 @@ export async function fetchCurrentGlobalRisk() {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        console.warn('[GLOBAL-RISK] Row id=1 missing in database table public.system2_global_risk');
-      } else {
-        console.error('[GLOBAL-RISK] FETCH FAILED', {
-          error_message: error.message,
-          error_code: error.code,
-          error_details: error.details,
-          error_hint: error.hint
-        });
-      }
+      console.error('[GLOBAL-RISK ERROR] GET failed:', error.message);
       return null;
     }
 
+    console.log('[GLOBAL-RISK GET]', { success: true, scenario: data.scenario });
     return data;
   } catch (err) {
-    console.error('[GLOBAL-RISK] FETCH EXCEPTION', err.message || err);
+    console.error('[GLOBAL-RISK ERROR] GET exception:', err.message || err);
     return null;
   }
 }
@@ -76,26 +70,8 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
     return { success: false, error: 'Invalid scenario key' };
   }
 
-  let urlOrigin = 'UNCONFIGURED';
-  try {
-    const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
-    if (env.VITE_SUPABASE_URL) urlOrigin = new URL(env.VITE_SUPABASE_URL).origin;
-  } catch (e) {}
-
-  console.log('[GLOBAL-RISK]', {
-    action: 'UPDATE',
-    scenario: targetScenarioKey,
-    supabase_url: urlOrigin,
-    table: 'system2_global_risk'
-  });
-
   if (!isSupabaseConfigured || !supabase) {
-    console.error('[GLOBAL-RISK] UPDATE FAILED', {
-      error_message: 'Supabase credentials missing in environment variables (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)',
-      error_code: 'UNCONFIGURED_ENV',
-      error_details: 'Build-time environment variables not set in Vercel Settings',
-      error_hint: 'Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel project settings and rebuild.'
-    });
+    console.error('[GLOBAL-RISK ERROR] Cannot update: Supabase unconfigured');
     return {
       success: false,
       error: 'Supabase unconfigured: Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel settings.'
@@ -117,24 +93,14 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
       .single();
 
     if (error) {
-      console.error('[GLOBAL-RISK] UPDATE FAILED', {
-        error_message: error.message,
-        error_code: error.code,
-        error_details: error.details,
-        error_hint: error.hint
-      });
+      console.error('[GLOBAL-RISK ERROR] UPDATE failed:', error.message);
       return { success: false, error: error.message || 'Database write failed' };
     }
 
-    console.log('[GLOBAL-RISK] UPDATE SUCCESS', data);
+    console.log('[GLOBAL-RISK UPDATE]', { scenario: data.scenario, success: true });
     return { success: true, data };
   } catch (err) {
-    console.error('[GLOBAL-RISK] UPDATE FAILED', {
-      error_message: err.message || 'TypeError: Failed to fetch',
-      error_code: 'FETCH_ERROR',
-      error_details: err.name || 'Network/CORS/Configuration Error',
-      error_hint: 'Verify VITE_SUPABASE_URL is valid and reachable from client browser.'
-    });
+    console.error('[GLOBAL-RISK ERROR] UPDATE exception:', err.message || err);
     return {
       success: false,
       error: err.message || 'TypeError: Failed to fetch (Check VITE_SUPABASE_URL in Vercel settings)'

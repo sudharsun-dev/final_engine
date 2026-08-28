@@ -23,6 +23,7 @@ export const Header = () => {
   const getScenarioBadgeStyle = () => {
     if (scenario === 'HIGH') return 'badge-high';
     if (scenario === 'MEDIUM') return 'badge-medium';
+    if (scenario === 'LOADING') return 'badge-medium';
     return 'badge-low';
   };
 
@@ -76,7 +77,9 @@ export const Header = () => {
 
           <div className="status-indicator">
             <span>GLOBAL RISK:</span>
-            <span className={getScenarioBadgeStyle()}>{scenario} ({riskScore}/100)</span>
+            <span className={getScenarioBadgeStyle()}>
+              {scenario === 'LOADING' ? 'LOADING...' : `${scenario} (${riskScore}/100)`}
+            </span>
           </div>
         </div>
       </div>
