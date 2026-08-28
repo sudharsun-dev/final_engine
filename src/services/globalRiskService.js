@@ -31,25 +31,16 @@ export const SCENARIOS = {
 };
 
 /**
- * Fetch initial system2_global_risk row (id = 1) from Supabase
+ * Fetch current system2_global_risk row (id = 1) from Supabase
  */
 export async function fetchCurrentGlobalRisk() {
   if (!isSupabaseConfigured || !supabase) {
-    console.log('[GLOBAL-RISK] Supabase unconfigured, checking local storage for active state');
-    try {
-      const stored = localStorage.getItem('system2_global_risk_sync');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && parsed.data) {
-          return parsed.data;
-        }
-      }
-    } catch (e) {}
+    console.log('[SUPABASE FETCH] Unconfigured environment, returning local default state');
     return SCENARIOS.LOW;
   }
 
   try {
-    console.log('[GLOBAL-RISK] Fetching initial state from system2_global_risk...');
+    console.log('[SUPABASE FETCH] SELECT * FROM public.system2_global_risk WHERE id = 1');
     const { data, error } = await supabase
       .from('system2_global_risk')
       .select('*')
@@ -57,42 +48,25 @@ export async function fetchCurrentGlobalRisk() {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        console.log('[GLOBAL-RISK] Row 1 missing in system2_global_risk, seeding LOW state');
-        await initializeDefaultRow();
-        return SCENARIOS.LOW;
-      }
+      console.error('[SUPABASE FETCH ERROR]', error);
       throw error;
     }
 
-    console.log('[GLOBAL-RISK] Initial state loaded:', data);
+    console.log('[SUPABASE FETCH SUCCESS]', data);
     return data;
   } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Error fetching global risk:', err.message || err);
+    console.error('[SUPABASE FETCH ERROR] Failed to fetch row id=1:', err.message || err);
     return SCENARIOS.LOW;
-  }
-}
-
-/**
- * Initialize default row 1 in system2_global_risk if missing
- */
-async function initializeDefaultRow() {
-  if (!isSupabaseConfigured || !supabase) return;
-  try {
-    const payload = { id: 1, ...SCENARIOS.LOW, updated_by: 'System Init', updated_at: new Date().toISOString() };
-    await supabase.from('system2_global_risk').upsert(payload);
-  } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Seeding row 1 failed:', err);
   }
 }
 
 /**
  * Update global risk scenario in Supabase system2_global_risk table (row id = 1)
  */
-export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'Presenter', previousState = {}) {
+export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'Presenter') {
   const scenarioData = SCENARIOS[targetScenarioKey];
   if (!scenarioData) {
-    console.error(`[GLOBAL-RISK ERROR] Invalid scenario key: ${targetScenarioKey}`);
+    console.error(`[SUPABASE UPDATE ERROR] Invalid scenario key: ${targetScenarioKey}`);
     return { success: false, error: 'Invalid scenario' };
   }
 
@@ -102,24 +76,13 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
     updated_at: new Date().toISOString()
   };
 
-  // Broadcast to other tabs/windows on local machine if offline
-  try {
-    const syncData = { type: 'SCENARIO_UPDATE', data: updatePayload, timestamp: Date.now() };
-    localStorage.setItem('system2_global_risk_sync', JSON.stringify(syncData));
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      const bc = new BroadcastChannel('system2_global_risk_channel');
-      bc.postMessage(syncData);
-      bc.close();
-    }
-  } catch (e) {}
-
   if (!isSupabaseConfigured || !supabase) {
-    console.log('[GLOBAL-RISK] Database update simulated locally:', targetScenarioKey);
+    console.log('[SUPABASE UPDATE] Unconfigured environment, simulated local update:', targetScenarioKey);
     return { success: true, data: updatePayload };
   }
 
   try {
-    console.log(`[GLOBAL-RISK] Updating database row id=1 to scenario: ${targetScenarioKey}`);
+    console.log(`[SUPABASE UPDATE] UPDATE public.system2_global_risk SET scenario='${targetScenarioKey}' WHERE id=1`);
     const { data, error } = await supabase
       .from('system2_global_risk')
       .update(updatePayload)
@@ -127,29 +90,32 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[SUPABASE UPDATE ERROR]', error);
+      throw error;
+    }
 
-    console.log('[GLOBAL-RISK] Database update successful:', data);
+    console.log('[SUPABASE UPDATE SUCCESS]', data);
 
-    // Audit log entry write
+    // Write log entry to system2_audit_log asynchronously
     supabase
       .from('system2_audit_log')
       .insert({
-        previous_scenario: previousState.scenario || 'LOW',
+        previous_scenario: 'N/A',
         new_scenario: data.scenario,
-        previous_score: previousState.risk_score || 15,
+        previous_score: 0,
         new_score: data.risk_score,
         action: data.recommended_action,
         updated_by: updatedBy,
         timestamp: new Date().toISOString()
       })
       .then(({ error: auditErr }) => {
-        if (auditErr) console.warn('[GLOBAL-RISK] Audit log write warning:', auditErr.message);
+        if (auditErr) console.warn('[SUPABASE UPDATE] Audit log notice:', auditErr.message);
       });
 
     return { success: true, data };
   } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Database update failed:', err.message || err);
+    console.error('[SUPABASE UPDATE ERROR] Update failed:', err.message || err);
     return { success: false, error: err.message || err };
   }
 }
@@ -169,7 +135,7 @@ export async function fetchAuditLogs(limit = 20) {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Failed to fetch audit logs:', err.message || err);
+    console.error('[SUPABASE FETCH ERROR] Failed to fetch audit logs:', err.message || err);
     return [];
   }
 }
