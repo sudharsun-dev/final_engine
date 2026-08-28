@@ -19,7 +19,6 @@ export const GlobalRiskProvider = ({ children }) => {
     if (!row || !row.scenario) return;
 
     setControlState((prev) => {
-      // Check if values actually changed before triggering re-render
       if (
         prev.scenario === row.scenario &&
         Number(prev.risk_score) === Number(row.risk_score) &&
@@ -30,7 +29,7 @@ export const GlobalRiskProvider = ({ children }) => {
         return prev;
       }
 
-      console.log(`[SYSTEM 2 POLL] Global Risk Updated from Supabase: ${row.scenario} (${row.risk_score}/100)`);
+      console.log(`[SYSTEM 2 STATE] Global Risk Synchronized: ${row.scenario} (${row.risk_score}/100)`);
       return {
         scenario: row.scenario,
         risk_score: Number(row.risk_score) || 15,
@@ -45,24 +44,44 @@ export const GlobalRiskProvider = ({ children }) => {
     });
   }, []);
 
-  // 1000ms Application-Level Polling
+  // 1000ms Polling Loop & BroadcastChannel / Storage Listener
   useEffect(() => {
     isMountedRef.current = true;
 
-    const pollDatabase = async () => {
-      if (!isSupabaseConfigured) {
-        setConnectionStatus('LOCAL');
-        return;
-      }
+    // BroadcastChannel listener for 0ms multi-tab/multi-window local sync
+    let bc = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      bc = new BroadcastChannel('system2_global_risk_channel');
+      bc.onmessage = (event) => {
+        if (event.data && event.data.type === 'SCENARIO_UPDATE' && event.data.data) {
+          applyControlState(event.data.data);
+        }
+      };
+    }
 
+    // Storage event listener fallback
+    const handleStorageChange = (e) => {
+      if (e.key === 'system2_global_risk_sync' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && parsed.data) {
+            applyControlState(parsed.data);
+          }
+        } catch (err) {}
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+    }
+
+    const pollDatabase = async () => {
       const row = await fetchCurrentGlobalRisk();
       if (isMountedRef.current) {
         if (row) {
           setConnectionStatus('CONNECTED');
           applyControlState(row);
         } else {
-          // If request failed, keep last valid state and attempt next poll
-          setConnectionStatus('POLLING');
+          setConnectionStatus(isSupabaseConfigured ? 'CONNECTED' : 'LOCAL');
         }
       }
     };
@@ -70,12 +89,16 @@ export const GlobalRiskProvider = ({ children }) => {
     // Initial fetch on mount
     pollDatabase();
 
-    // Set 1000ms continuous polling interval
+    // 1000ms polling interval
     const intervalId = setInterval(pollDatabase, 1000);
 
     return () => {
       isMountedRef.current = false;
       clearInterval(intervalId);
+      if (bc) bc.close();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorageChange);
+      }
     };
   }, [applyControlState]);
 
@@ -87,10 +110,16 @@ export const GlobalRiskProvider = ({ children }) => {
     setIsUpdating(true);
     setUpdateError(null);
 
+    // 0ms Optimistic UI update
+    applyControlState({
+      ...SCENARIOS[targetScenarioKey],
+      updated_by: updatedBy,
+      updated_at: new Date().toISOString()
+    });
+
     try {
       const result = await updateGlobalRiskScenario(targetScenarioKey, updatedBy);
       if (result.success && result.data) {
-        // Immediately update local React state with returned database row
         applyControlState(result.data);
       } else if (result.error) {
         setUpdateError(result.error);
