@@ -4,22 +4,24 @@ const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.met
 const supabaseUrl = env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || '';
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-
-if (!isSupabaseConfigured) {
-  console.warn(
-    '[SUPABASE CONFIG] Supabase credentials missing in environment variables. ' +
-    'Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env or Vercel settings.'
-  );
+let urlHost = 'NOT SET';
+try {
+  if (supabaseUrl) {
+    urlHost = new URL(supabaseUrl).hostname;
+  }
+} catch (e) {
+  urlHost = 'INVALID URL (' + supabaseUrl + ')';
 }
 
-// Create Supabase client instance (or null fallback if unconfigured)
+console.log('[SUPABASE CONFIG]', {
+  urlConfigured: Boolean(supabaseUrl),
+  anonKeyConfigured: Boolean(supabaseAnonKey),
+  urlHost
+});
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+// Create single Supabase client instance
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
-        },
-      },
-    })
+  ? createClient(supabaseUrl, supabaseAnonKey)
   : null;

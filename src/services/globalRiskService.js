@@ -32,6 +32,7 @@ export const SCENARIOS = {
 
 /**
  * Fetch current system2_global_risk row (id = 1) from Supabase
+ * Initial database read MUST NOT write to the database.
  */
 export async function fetchCurrentGlobalRisk() {
   if (!isSupabaseConfigured || !supabase) {
@@ -40,7 +41,7 @@ export async function fetchCurrentGlobalRisk() {
   }
 
   try {
-    console.log('[SUPABASE FETCH] SELECT * FROM public.system2_global_risk WHERE id = 1');
+    console.log('[SUPABASE FETCH] SELECT * FROM system2_global_risk WHERE id = 1');
     const { data, error } = await supabase
       .from('system2_global_risk')
       .select('*')
@@ -49,13 +50,17 @@ export async function fetchCurrentGlobalRisk() {
 
     if (error) {
       console.error('[SUPABASE FETCH ERROR]', error);
-      throw error;
+      return SCENARIOS.LOW;
     }
 
     console.log('[SUPABASE FETCH SUCCESS]', data);
     return data;
   } catch (err) {
-    console.error('[SUPABASE FETCH ERROR] Failed to fetch row id=1:', err.message || err);
+    console.error('[SUPABASE FETCH ERROR] Exception during fetch:', {
+      message: err.message,
+      name: err.name,
+      stack: err.stack
+    });
     return SCENARIOS.LOW;
   }
 }
@@ -82,7 +87,7 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
   }
 
   try {
-    console.log(`[SUPABASE UPDATE] UPDATE public.system2_global_risk SET scenario='${targetScenarioKey}' WHERE id=1`);
+    console.log(`[SUPABASE UPDATE] UPDATE system2_global_risk SET scenario='${targetScenarioKey}' WHERE id=1`);
     const { data, error } = await supabase
       .from('system2_global_risk')
       .update(updatePayload)
@@ -91,13 +96,18 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
       .single();
 
     if (error) {
-      console.error('[SUPABASE UPDATE ERROR]', error);
-      throw error;
+      console.error('[SUPABASE UPDATE ERROR]', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return { success: false, error: error.message || 'Database update failed' };
     }
 
     console.log('[SUPABASE UPDATE SUCCESS]', data);
 
-    // Write log entry to system2_audit_log asynchronously
+    // Asynchronously log to system2_audit_log
     supabase
       .from('system2_audit_log')
       .insert({
@@ -115,8 +125,13 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
 
     return { success: true, data };
   } catch (err) {
-    console.error('[SUPABASE UPDATE ERROR] Update failed:', err.message || err);
-    return { success: false, error: err.message || err };
+    console.error('[SUPABASE UPDATE ERROR]', {
+      message: err.message,
+      name: err.name,
+      stack: err.stack,
+      hint: 'If TypeError: Failed to fetch occurs, check VITE_SUPABASE_URL network connection or CORS configuration.'
+    });
+    return { success: false, error: err.message || 'Failed to fetch' };
   }
 }
 
