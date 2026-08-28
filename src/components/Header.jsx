@@ -10,19 +10,15 @@ import {
   Server, 
   Key, 
   Radio,
-  User,
-  LogOut,
-  PhoneCall
+  LogOut
 } from 'lucide-react';
 import { useGlobalRisk } from '../hooks/useGlobalRisk';
 import { useAuth } from '../context/AuthContext';
-import { useGlobalCall } from '../context/GlobalCallContext';
 
 export const Header = () => {
   const navigate = useNavigate();
-  const { scenario, riskScore, connectionStatus, updateScenario } = useGlobalRisk();
+  const { scenario, riskScore, connectionStatus } = useGlobalRisk();
   const { currentUser, logout } = useAuth();
-  const { activeCall, isCallActive } = useGlobalCall();
 
   const getScenarioBadgeStyle = () => {
     if (scenario === 'HIGH') return 'badge-high';
@@ -50,7 +46,7 @@ export const Header = () => {
         </div>
 
         <div className="header-status-bar">
-          {/* User Profile Pill */}
+          {/* User Session Pill */}
           {currentUser && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#1e293b', padding: '0.2rem 0.6rem', borderRadius: '20px', border: '1px solid #334155' }}>
               <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0d9488', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '700' }}>
@@ -69,14 +65,6 @@ export const Header = () => {
             </div>
           )}
 
-          {/* Active Call Badge */}
-          {isCallActive && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#14532d', color: '#86efac', padding: '0.2rem 0.6rem', borderRadius: '4px', border: '1px solid #22c55e', fontSize: '0.72rem', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
-              <PhoneCall size={12} className="animate-pulse" />
-              <span>ACTIVE CALL: {activeCall?.call_id}</span>
-            </div>
-          )}
-
           <div className="status-indicator">
             <Radio size={14} className="animate-pulse" style={{ color: connectionStatus === 'CONNECTED' ? '#22c55e' : '#f59e0b' }} />
             <span>SUPABASE REALTIME:</span>
@@ -86,59 +74,9 @@ export const Header = () => {
 
           <div style={{ height: '16px', width: '1px', background: '#334155' }}></div>
 
-          <div className="status-indicator" style={{ gap: '0.6rem' }}>
-            <span>GLOBAL SCENARIO:</span>
-            <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
-              <button
-                onClick={() => updateScenario('LOW')}
-                style={{
-                  background: scenario === 'LOW' ? '#16a34a' : '#1e293b',
-                  color: '#fff',
-                  border: '1px solid #334155',
-                  borderRadius: '4px',
-                  padding: '0.15rem 0.45rem',
-                  fontSize: '0.72rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                LOW
-              </button>
-              <button
-                onClick={() => updateScenario('MEDIUM')}
-                style={{
-                  background: scenario === 'MEDIUM' ? '#d97706' : '#1e293b',
-                  color: '#fff',
-                  border: '1px solid #334155',
-                  borderRadius: '4px',
-                  padding: '0.15rem 0.45rem',
-                  fontSize: '0.72rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                MED
-              </button>
-              <button
-                onClick={() => updateScenario('HIGH')}
-                style={{
-                  background: scenario === 'HIGH' ? '#dc2626' : '#1e293b',
-                  color: '#fff',
-                  border: '1px solid #334155',
-                  borderRadius: '4px',
-                  padding: '0.15rem 0.45rem',
-                  fontSize: '0.72rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                HIGH
-              </button>
-            </div>
-            <span className={getScenarioBadgeStyle()}>{scenario} ({riskScore})</span>
+          <div className="status-indicator">
+            <span>GLOBAL RISK:</span>
+            <span className={getScenarioBadgeStyle()}>{scenario} ({riskScore}/100)</span>
           </div>
         </div>
       </div>

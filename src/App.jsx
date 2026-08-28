@@ -1,10 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { GlobalCallProvider } from './context/GlobalCallContext';
 import { GlobalRiskProvider } from './context/GlobalRiskContext';
 import { Header } from './components/Header';
-import { IncomingCallModal } from './components/IncomingCallModal';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { LiveAnalysis } from './pages/LiveAnalysis';
@@ -43,35 +41,32 @@ const ProtectedLayout = ({ children }) => {
 export function App() {
   return (
     <AuthProvider>
-      <GlobalCallProvider>
-        <GlobalRiskProvider>
-          <BrowserRouter>
-            <IncomingCallModal />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedLayout>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/live-analysis" element={<LiveAnalysis />} />
-                      <Route path="/transaction-risk" element={<TransactionRisk />} />
-                      <Route path="/risk-alerts" element={<RiskAlerts />} />
-                      <Route path="/policies" element={<Policies />} />
-                      <Route path="/audit-log" element={<AuditLog />} />
-                      <Route path="/system-health" element={<SystemHealth />} />
-                      <Route path="/api-docs" element={<ApiDocs />} />
-                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                    </Routes>
-                  </ProtectedLayout>
-                }
-              />
-            </Routes>
-          </BrowserRouter>
-        </GlobalRiskProvider>
-      </GlobalCallProvider>
+      <GlobalRiskProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedLayout>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/live-analysis" element={<LiveAnalysis />} />
+                    <Route path="/transaction-risk" element={<TransactionRisk />} />
+                    <Route path="/risk-alerts" element={<RiskAlerts />} />
+                    <Route path="/policies" element={<Policies />} />
+                    <Route path="/audit-log" element={<AuditLog />} />
+                    <Route path="/system-health" element={<SystemHealth />} />
+                    <Route path="/api-docs" element={<ApiDocs />} />
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  </Routes>
+                </ProtectedLayout>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </GlobalRiskProvider>
     </AuthProvider>
   );
 }
