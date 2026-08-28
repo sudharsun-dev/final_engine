@@ -59,7 +59,7 @@ export const ApiDocs = () => {
 
           <div className="telemetry-item">
             <span className="telemetry-label">DATABASE TABLE</span>
-            <span className="telemetry-value" style={{ fontSize: '0.9rem' }}>public.system2_control</span>
+            <span className="telemetry-value" style={{ fontSize: '0.85rem' }}>public.system2_global_risk</span>
           </div>
 
           <div className="telemetry-item">
@@ -74,7 +74,7 @@ export const ApiDocs = () => {
 
         <div style={{ background: '#090d16', padding: '1rem', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8' }}>
           <div style={{ color: '#94a3b8', marginBottom: '0.4rem' }}>// GET Active Risk State</div>
-          <div>GET https://{import.meta.env.VITE_SUPABASE_URL || 'your-supabase-id.supabase.co'}/rest/v1/system2_control?id=eq.1</div>
+          <div>GET https://{import.meta.env.VITE_SUPABASE_URL || 'your-supabase-id.supabase.co'}/rest/v1/system2_global_risk?id=eq.1</div>
           
           <div style={{ color: '#94a3b8', margin: '0.8rem 0 0.4rem 0' }}>// Realtime WebSocket Channel</div>
           <div>wss://{import.meta.env.VITE_SUPABASE_URL || 'your-supabase-id.supabase.co'}/realtime/v1/websocket</div>

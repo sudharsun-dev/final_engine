@@ -6,10 +6,10 @@ import { AudioWaveform } from '../components/AudioWaveform';
 import { AudioTelemetry } from '../components/AudioTelemetry';
 import { Pipeline } from '../components/Pipeline';
 import { StatusBadge } from '../components/StatusBadge';
-import { ShieldCheck, Activity, Server, Radio, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Activity, Server, Radio } from 'lucide-react';
 
 export const Dashboard = () => {
-  const { scenario, riskScore, connectionStatus, recommendedAction, updatedAt } = useGlobalRisk();
+  const { scenario, riskScore, connectionStatus, recommendedAction } = useGlobalRisk();
   const { canvasRef, isAnalyzing, audioError, telemetry, start, stop } = useAudioAnalyzer();
 
   return (
