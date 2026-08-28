@@ -10,7 +10,8 @@ import {
   Server, 
   Key, 
   Radio,
-  LogOut
+  LogOut,
+  Shield
 } from 'lucide-react';
 import { useGlobalRisk } from '../hooks/useGlobalRisk';
 import { useAuth } from '../context/AuthContext';
@@ -33,21 +34,35 @@ export const Header = () => {
   };
 
   return (
-    <header className="header">
-      <div className="header-top">
+    <header className="header" style={{ background: '#070d19', borderBottom: '2px solid #1e293b' }}>
+      {/* Top Tricolor Accent Line */}
+      <div style={{ height: '3px', background: 'linear-gradient(to right, #ff9933 0%, #ffffff 50%, #128807 100%)' }}></div>
+
+      <div className="header-top" style={{ padding: '0.85rem 1.5rem' }}>
         <div className="header-brand">
-          <img src="/logo.png" alt="Nirbhaya Sanchar Logo" className="brand-logo-img" />
+          {/* Government Emblem / Logo Icon */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <img src="/logo.png" alt="Nirbhaya Sanchar Logo" className="brand-logo-img" style={{ height: '48px', objectFit: 'contain' }} />
+            <div style={{ height: '36px', width: '1px', background: '#334155' }}></div>
+          </div>
+
           <div className="brand-titles">
-            <div className="brand-title-row">
-              <span className="brand-title">NIRBHAYA SANCHAR</span>
-              <span className="system-badge">SYSTEM 2</span>
+            <div className="brand-title-row" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span className="brand-title" style={{ fontSize: '1.3rem', fontWeight: '800', letterSpacing: '0.04em', color: '#ffffff' }}>
+                NIRBHAYA SANCHAR
+              </span>
+              <span className="system-badge" style={{ background: '#0284c7', border: '1px solid #0369a1', color: '#ffffff', fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
+                SYSTEM 2
+              </span>
             </div>
-            <span className="brand-subtitle">Secure Voice Communication & Authenticity Engine</span>
+            <span className="brand-subtitle" style={{ fontSize: '0.74rem', color: '#94a3b8', letterSpacing: '0.04em', fontWeight: '600' }}>
+              SECURE VOICE COMMUNICATION & AUTHENTICITY ENGINE
+            </span>
           </div>
         </div>
 
-        <div className="header-status-bar">
-          {/* User Session Pill */}
+        <div className="header-status-bar" style={{ background: '#0f172a', borderColor: '#334155' }}>
+          {/* Logged-in Operator Pill */}
           {currentUser && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#1e293b', padding: '0.2rem 0.6rem', borderRadius: '20px', border: '1px solid #334155' }}>
               <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0d9488', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '700' }}>
@@ -70,7 +85,7 @@ export const Header = () => {
             <Radio size={14} className="animate-pulse" style={{ color: '#22c55e' }} />
             <span>GLOBAL SYNC:</span>
             <span className="status-dot online"></span>
-            <span>CONNECTED</span>
+            <span style={{ color: '#22c55e' }}>CONNECTED</span>
           </div>
 
           <div style={{ height: '16px', width: '1px', background: '#334155' }}></div>
@@ -84,7 +99,7 @@ export const Header = () => {
         </div>
       </div>
 
-      <nav className="header-nav">
+      <nav className="header-nav" style={{ background: '#090e1a', borderTop: '1px solid #1e293b' }}>
         <div className="nav-container">
           <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <ShieldCheck size={16} />
