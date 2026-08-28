@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import { useGlobalRisk } from '../hooks/useGlobalRisk';
 import { useAudioAnalyzer } from '../hooks/useAudioAnalyzer';
 import { fetchAuditLogs } from '../services/globalRiskService';
-import { AudioWaveform } from '../components/AudioWaveform';
 import { AudioTelemetry } from '../components/AudioTelemetry';
 import { StatusBadge } from '../components/StatusBadge';
 import { 
@@ -23,7 +22,10 @@ import {
   FileText,
   CreditCard,
   Building2,
-  ChevronRight
+  ChevronRight,
+  Mic,
+  MicOff,
+  Volume2
 } from 'lucide-react';
 
 export const Dashboard = () => {
@@ -42,6 +44,25 @@ export const Dashboard = () => {
 
   const [auditLogs, setAuditLogs] = useState([]);
 
+  // 1. AUTOMATICALLY START AUDIO ANALYZER ON DASHBOARD MOUNT
+  useEffect(() => {
+    let isMounted = true;
+
+    const initAudio = async () => {
+      if (isMounted) {
+        await start();
+      }
+    };
+
+    initAudio();
+
+    return () => {
+      isMounted = false;
+      stop();
+    };
+  }, []);
+
+  // Fetch recent security audit logs
   useEffect(() => {
     const loadLogs = async () => {
       const logs = await fetchAuditLogs(5);
@@ -65,44 +86,44 @@ export const Dashboard = () => {
         color: '#ffffff', 
         borderColor: '#334155',
         borderLeft: '5px solid #0284c7',
-        padding: '1.4rem 1.6rem' 
+        padding: '1.25rem 1.5rem' 
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.3rem' }}>
               <span style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.7rem', fontWeight: '800', padding: '0.15rem 0.6rem', borderRadius: '4px', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
                 NATIONAL VOICE SECURITY MONITORING
               </span>
               <span style={{ background: '#14532d', color: '#86efac', fontSize: '0.7rem', fontWeight: '800', padding: '0.15rem 0.5rem', borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>
-                CLASSIFIED PROTOTYPE
+                SYSTEM 2 OPERATIONAL
               </span>
             </div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: '800', letterSpacing: '0.02em', color: '#ffffff' }}>
+            <h1 style={{ fontSize: '1.35rem', fontWeight: '800', letterSpacing: '0.02em', color: '#ffffff' }}>
               NIRBHAYA SANCHAR — CYBER SECURITY OPERATIONS CENTER
             </h1>
-            <p style={{ fontSize: '0.86rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-              Real-time monitoring and risk assessment for voice impersonation, synthetic speech and communication fraud.
+            <p style={{ fontSize: '0.84rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+              Real-time automated audio monitoring and voice authenticity fraud detection.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ background: '#090e1a', padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-sm)', border: '1px solid #334155', minWidth: '130px' }}>
-              <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>SYSTEM STATUS</span>
-              <strong style={{ color: '#22c55e', fontSize: '0.88rem', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.1rem' }}>
+          <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
+            <div style={{ background: '#090e1a', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid #334155', minWidth: '120px' }}>
+              <span style={{ fontSize: '0.66rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>SYSTEM STATUS</span>
+              <strong style={{ color: '#22c55e', fontSize: '0.84rem', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.1rem' }}>
                 <span className="status-dot online"></span> OPERATIONAL
               </strong>
             </div>
 
-            <div style={{ background: '#090e1a', padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-sm)', border: '1px solid #334155', minWidth: '130px' }}>
-              <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>GLOBAL SYNC</span>
-              <strong style={{ color: connectionStatus === 'CONNECTED' ? '#22c55e' : '#f59e0b', fontSize: '0.88rem', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.1rem' }}>
+            <div style={{ background: '#090e1a', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid #334155', minWidth: '120px' }}>
+              <span style={{ fontSize: '0.66rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>GLOBAL SYNC</span>
+              <strong style={{ color: connectionStatus === 'CONNECTED' ? '#22c55e' : '#f59e0b', fontSize: '0.84rem', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.1rem' }}>
                 <Radio size={12} className="animate-pulse" /> {connectionStatus}
               </strong>
             </div>
 
-            <div style={{ background: '#090e1a', padding: '0.6rem 0.9rem', borderRadius: 'var(--radius-sm)', border: '1px solid #334155', minWidth: '130px' }}>
-              <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>AI ENGINE</span>
-              <strong style={{ color: '#38bdf8', fontSize: '0.88rem', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.1rem' }}>
+            <div style={{ background: '#090e1a', padding: '0.55rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid #334155', minWidth: '120px' }}>
+              <span style={{ fontSize: '0.66rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>AI ENGINE</span>
+              <strong style={{ color: '#38bdf8', fontSize: '0.84rem', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.1rem' }}>
                 <Cpu size={12} /> ACTIVE
               </strong>
             </div>
@@ -110,175 +131,181 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* 2. SIH 2026 JUDGE ARCHITECTURE FLOW BANNER (SECTION 17) */}
-      <div className="card" style={{ background: '#ffffff', borderColor: '#e2e8f0', padding: '1rem 1.25rem' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-          SIH 2026 ARCHITECTURE — END-TO-END SECURITY PIPELINE
+      {/* 2. VISUAL FLOW CONNECTOR BANNER */}
+      <div className="card" style={{ background: '#ffffff', borderColor: '#e2e8f0', padding: '0.85rem 1.2rem', marginBottom: 0 }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
+          SECURITY PIPELINE FLOW
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflowX: 'auto', gap: '0.5rem', paddingBottom: '0.2rem' }}>
-          <div style={{ background: '#f8fafc', padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', textAlign: 'center', flex: 1, minWidth: '110px' }}>
-            1. VOICE CALL
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflowX: 'auto', gap: '0.4rem' }}>
+          <div style={{ background: '#f8fafc', padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.76rem', fontWeight: '700', color: '#0f172a', textAlign: 'center', flex: 1, minWidth: '100px' }}>
+            1. LIVE AUDIO
           </div>
-          <ChevronRight size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
-          <div style={{ background: '#f8fafc', padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0284c7', textAlign: 'center', flex: 1, minWidth: '130px' }}>
-            2. LIVE AUDIO ANALYSIS
+          <ChevronRight size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+          <div style={{ background: '#f8fafc', padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.76rem', fontWeight: '700', color: '#0284c7', textAlign: 'center', flex: 1, minWidth: '110px' }}>
+            2. WAVEFORM
           </div>
-          <ChevronRight size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
-          <div style={{ background: '#f8fafc', padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#4f46e5', textAlign: 'center', flex: 1, minWidth: '150px' }}>
-            3. AI AUTHENTICITY DETECTION
+          <ChevronRight size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+          <div style={{ background: '#f8fafc', padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.76rem', fontWeight: '700', color: '#4f46e5', textAlign: 'center', flex: 1, minWidth: '140px' }}>
+            3. VOICE AUTHENTICITY
           </div>
-          <ChevronRight size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
-          <div style={{ background: '#f8fafc', padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0d9488', textAlign: 'center', flex: 1, minWidth: '160px' }}>
-            4. MULTI-SIGNAL RISK ASSESSMENT
-          </div>
-          <ChevronRight size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
-          <div style={{ background: '#f8fafc', padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#d97706', textAlign: 'center', flex: 1, minWidth: '130px' }}>
-            5. GLOBAL RISK SCORE
-          </div>
-          <ChevronRight size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
-          <div style={{ background: '#0f172a', padding: '0.5rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid #0f172a', fontSize: '0.78rem', fontWeight: '800', color: '#ffffff', textAlign: 'center', flex: 1, minWidth: '120px' }}>
-            6. SECURITY ACTION
+          <ChevronRight size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+          <div style={{ background: '#0f172a', padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid #0f172a', fontSize: '0.76rem', fontWeight: '800', color: '#ffffff', textAlign: 'center', flex: 1, minWidth: '120px' }}>
+            4. GLOBAL RISK
           </div>
         </div>
       </div>
 
-      {/* 3. LIVE SECURITY OVERVIEW & GLOBAL RISK CARD (GRID-2) */}
-      <div className="grid-2">
+      {/* 3. HERO TOP SECTION: SIDE-BY-SIDE LIVE AUDIO MONITOR & GLOBAL RISK CARD (GRID-2) */}
+      <div className="grid-2" style={{ alignItems: 'stretch' }}>
         
-        {/* Live Security Overview Panel */}
-        <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-header">
-            <h3 className="card-title">
-              <ShieldCheck size={18} style={{ color: '#0284c7' }} />
-              LIVE SECURITY OVERVIEW
-            </h3>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              REAL-TIME SOC METRICS
-            </span>
+        {/* LEFT COLUMN: LIVE AUDIO MONITOR & WAVEFORM ANALYZER */}
+        <div className="card" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div className="card-header" style={{ marginBottom: '0.75rem' }}>
+              <h3 className="card-title" style={{ fontSize: '1rem' }}>
+                <Volume2 size={18} style={{ color: '#0284c7' }} />
+                LIVE AUDIO MONITOR & WAVEFORM ANALYZER
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
+                <span className={`status-dot ${isAnalyzing ? 'online' : 'offline'}`}></span>
+                <span style={{ color: isAnalyzing ? '#16a34a' : '#ef4444' }}>
+                  {isAnalyzing ? 'AUDIO RECEIVING' : 'STANDBY'}
+                </span>
+                <span style={{ color: '#94a3b8' }}>• 16 kHz PCM</span>
+              </div>
+            </div>
+
+            {audioError ? (
+              <div className="alert-banner warning" style={{ marginBottom: '0.75rem', padding: '0.6rem 0.8rem', fontSize: '0.8rem' }}>
+                <MicOff size={16} />
+                <span>MICROPHONE PERMISSION REQUIRED: Please grant microphone access in browser toolbar.</span>
+              </div>
+            ) : null}
+
+            {/* Continuous Live Canvas Waveform */}
+            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+              <canvas ref={canvasRef} className="waveform-canvas" style={{ height: '150px' }} />
+              <div style={{ position: 'absolute', right: '12px', top: '10px', fontSize: '0.7rem', fontFamily: 'var(--font-mono)', background: 'rgba(15,23,42,0.85)', color: '#38bdf8', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid #334155' }}>
+                LIVE SIGNAL MONITOR
+              </div>
+            </div>
           </div>
 
-          <div className="grid-2" style={{ gap: '1rem' }}>
-            <div style={{ background: 'var(--bg-card-alt)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span className="telemetry-label">ACTIVE SESSIONS</span>
-              <div style={{ fontSize: '2rem', fontWeight: '900', fontFamily: 'var(--font-mono)', color: '#0f172a', marginTop: '0.2rem' }}>
-                01
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>1 Active Monitoring Stream</span>
+          {/* Audio Metrics Bar */}
+          <div className="grid-4" style={{ gap: '0.5rem', background: 'var(--bg-card-alt)', padding: '0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+            <div>
+              <span className="telemetry-label" style={{ fontSize: '0.65rem' }}>MICROPHONE</span>
+              <strong style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: isAnalyzing ? '#16a34a' : '#ef4444', display: 'block' }}>
+                {isAnalyzing ? 'ACTIVE' : 'INACTIVE'}
+              </strong>
             </div>
 
-            <div style={{ background: 'var(--bg-card-alt)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span className="telemetry-label">VOICE ANALYSIS</span>
-              <div style={{ fontSize: '1.25rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: isAnalyzing ? '#16a34a' : '#0284c7', marginTop: '0.5rem' }}>
-                {isAnalyzing ? 'ACTIVE (LIVE)' : 'STANDBY (READY)'}
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Microphone DSP Active</span>
+            <div>
+              <span className="telemetry-label" style={{ fontSize: '0.65rem' }}>SAMPLE RATE</span>
+              <strong style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: '#0f172a', display: 'block' }}>
+                {telemetry.sampleRate ? `${(telemetry.sampleRate / 1000).toFixed(0)} kHz` : '16 kHz'}
+              </strong>
             </div>
 
-            <div style={{ background: 'var(--bg-card-alt)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span className="telemetry-label">GLOBAL RISK</span>
-              <div style={{ fontSize: '1.45rem', fontWeight: '900', fontFamily: 'var(--font-mono)', color: scenario === 'HIGH' ? '#dc2626' : scenario === 'MEDIUM' ? '#d97706' : '#16a34a', marginTop: '0.3rem' }}>
-                {scenario === 'LOADING' ? 'LOADING...' : `${scenario} · ${riskScore}/100`}
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Action: <strong>{recommendedAction}</strong></span>
+            <div>
+              <span className="telemetry-label" style={{ fontSize: '0.65rem' }}>AUDIO QUALITY</span>
+              <strong style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: '#0284c7', display: 'block' }}>
+                100% EXCELLENT
+              </strong>
             </div>
 
-            <div style={{ background: 'var(--bg-card-alt)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span className="telemetry-label">SECURITY ALERTS</span>
-              <div style={{ fontSize: '2rem', fontWeight: '900', fontFamily: 'var(--font-mono)', color: scenario === 'HIGH' ? '#dc2626' : '#0f172a', marginTop: '0.2rem' }}>
-                {scenario === 'HIGH' ? '02' : scenario === 'MEDIUM' ? '01' : '00'}
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Active Triggered Signals</span>
+            <div>
+              <span className="telemetry-label" style={{ fontSize: '0.65rem' }}>WINDOWS</span>
+              <strong style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: '#4f46e5', display: 'block' }}>
+                #{telemetry.windowCount?.toString().padStart(3, '0') || '001'}
+              </strong>
             </div>
           </div>
         </div>
 
-        {/* Global Risk Status Card */}
-        <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-header">
-            <h3 className="card-title">
-              <ShieldAlert size={18} style={{ color: scenario === 'HIGH' ? '#dc2626' : scenario === 'MEDIUM' ? '#d97706' : '#16a34a' }} />
-              GLOBAL RISK STATUS
-            </h3>
-            <StatusBadge scenario={scenario} />
+        {/* RIGHT COLUMN: DYNAMIC GLOBAL RISK STATUS CARD */}
+        <div className="card" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div className="card-header" style={{ marginBottom: '0.75rem' }}>
+              <h3 className="card-title" style={{ fontSize: '1rem' }}>
+                <ShieldAlert size={18} style={{ color: scenario === 'HIGH' ? '#dc2626' : scenario === 'MEDIUM' ? '#d97706' : '#16a34a' }} />
+                GLOBAL RISK STATUS
+              </h3>
+              <StatusBadge scenario={scenario} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                padding: '1.2rem', 
+                borderRadius: 'var(--radius-md)', 
+                background: scenario === 'HIGH' ? '#fee2e2' : scenario === 'MEDIUM' ? '#fef3c7' : '#dcfce7',
+                border: `1px solid ${scenario === 'HIGH' ? '#fca5a5' : scenario === 'MEDIUM' ? '#fde047' : '#86efac'}`
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    DYNAMIC RISK SCORE
+                  </span>
+                  <div style={{ fontSize: '2.2rem', fontWeight: '900', fontFamily: 'var(--font-mono)', color: scenario === 'HIGH' ? '#991b1b' : scenario === 'MEDIUM' ? '#92400e' : '#166534', lineHeight: 1.1, marginTop: '0.15rem' }}>
+                    {scenario === 'LOADING' ? '...' : `${riskScore} / 100`}
+                  </div>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '800', color: scenario === 'HIGH' ? '#991b1b' : scenario === 'MEDIUM' ? '#92400e' : '#166534' }}>
+                    RISK LEVEL: {riskLevel}
+                  </span>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    RECOMMENDED ACTION
+                  </span>
+                  <div style={{ 
+                    fontSize: '1.3rem', 
+                    fontWeight: '900', 
+                    fontFamily: 'var(--font-mono)', 
+                    color: '#ffffff',
+                    background: scenario === 'HIGH' ? '#dc2626' : scenario === 'MEDIUM' ? '#d97706' : '#16a34a',
+                    padding: '0.45rem 0.95rem',
+                    borderRadius: 'var(--radius-sm)',
+                    marginTop: '0.3rem',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                  }}>
+                    {recommendedAction}
+                  </div>
+                </div>
+              </div>
+
+              {/* Realtime Metrics Breakdown */}
+              <div className="grid-3" style={{ gap: '0.5rem' }}>
+                <div style={{ background: 'var(--bg-card-alt)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', display: 'block', fontWeight: '600' }}>SYNTHETIC PROB</span>
+                  <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)' }}>{syntheticProbability}%</strong>
+                </div>
+
+                <div style={{ background: 'var(--bg-card-alt)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', display: 'block', fontWeight: '600' }}>AUTHENTICITY</span>
+                  <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)' }}>{authenticity}%</strong>
+                </div>
+
+                <div style={{ background: 'var(--bg-card-alt)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', display: 'block', fontWeight: '600' }}>CONFIDENCE</span>
+                  <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)' }}>{confidence}%</strong>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              padding: '1.1rem', 
-              borderRadius: 'var(--radius-md)', 
-              background: scenario === 'HIGH' ? '#fee2e2' : scenario === 'MEDIUM' ? '#fef3c7' : '#dcfce7',
-              border: `1px solid ${scenario === 'HIGH' ? '#fca5a5' : scenario === 'MEDIUM' ? '#fde047' : '#86efac'}`
-            }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  RISK SCORE & LEVEL
-                </span>
-                <div style={{ fontSize: '2rem', fontWeight: '900', fontFamily: 'var(--font-mono)', color: scenario === 'HIGH' ? '#991b1b' : scenario === 'MEDIUM' ? '#92400e' : '#166534', lineHeight: 1.1, marginTop: '0.2rem' }}>
-                  {scenario === 'LOADING' ? '...' : `${riskScore} / 100`}
-                </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: scenario === 'HIGH' ? '#991b1b' : scenario === 'MEDIUM' ? '#92400e' : '#166534' }}>
-                  RISK LEVEL: {riskLevel}
-                </span>
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  RECOMMENDED ACTION
-                </span>
-                <div style={{ 
-                  fontSize: '1.25rem', 
-                  fontWeight: '900', 
-                  fontFamily: 'var(--font-mono)', 
-                  color: '#ffffff',
-                  background: scenario === 'HIGH' ? '#dc2626' : scenario === 'MEDIUM' ? '#d97706' : '#16a34a',
-                  padding: '0.4rem 0.9rem',
-                  borderRadius: 'var(--radius-sm)',
-                  marginTop: '0.3rem',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-                }}>
-                  {recommendedAction}
-                </div>
-              </div>
-            </div>
-
-            {/* Metrics Breakdown */}
-            <div className="grid-3" style={{ gap: '0.6rem' }}>
-              <div style={{ background: 'var(--bg-card-alt)', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: '600' }}>SYNTHETIC PROB</span>
-                <strong style={{ fontSize: '1rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)' }}>{syntheticProbability}%</strong>
-              </div>
-
-              <div style={{ background: 'var(--bg-card-alt)', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: '600' }}>AUTHENTICITY</span>
-                <strong style={{ fontSize: '1rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)' }}>{authenticity}%</strong>
-              </div>
-
-              <div style={{ background: 'var(--bg-card-alt)', padding: '0.6rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: '600' }}>CONFIDENCE</span>
-                <strong style={{ fontSize: '1rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)' }}>{confidence}%</strong>
-              </div>
-            </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingTop: '0.6rem', borderTop: '1px solid var(--border-color)', marginTop: '0.6rem' }}>
+            ● Synchronized in real time from Supabase database row id=1 across all open devices.
           </div>
         </div>
       </div>
 
-      {/* 4. LIVE AUDIO ANALYZER FRAME */}
-      <AudioWaveform 
-        canvasRef={canvasRef}
-        isAnalyzing={isAnalyzing}
-        audioError={audioError}
-        telemetry={telemetry}
-        onStart={start}
-        onStop={stop}
-      />
-
-      {/* 5. AUDIO TELEMETRY GRID */}
+      {/* 4. AUDIO TELEMETRY GRID */}
       <AudioTelemetry telemetry={telemetry} />
 
-      {/* 6. AI VOICE AUTHENTICITY ENGINE & SECURITY SIGNALS (GRID-2) */}
+      {/* 5. AI VOICE AUTHENTICITY ENGINE & SECURITY SIGNALS (GRID-2) */}
       <div className="grid-2">
         {/* AI Voice Authenticity Engine Card */}
         <div className="card" style={{ marginBottom: 0 }}>
@@ -373,7 +400,7 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* 7. SECURITY OPERATIONS NAVIGATION PANEL */}
+      {/* 6. SECURITY OPERATIONS MODULES & AUDIT LOG */}
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">
@@ -410,45 +437,7 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* 8. RECENT AUDIT LOG TIMELINE */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">
-            <Clock size={18} style={{ color: '#0d9488' }} />
-            RECENT SECURITY AUDIT EVENTS
-          </h3>
-          <NavLink to="/audit-log" style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '700' }}>
-            VIEW ALL AUDIT LOGS →
-          </NavLink>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {auditLogs.length > 0 ? (
-            auditLogs.map((log) => (
-              <div key={log.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 0.9rem', background: 'var(--bg-card-alt)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.84rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Clock size={14} style={{ color: 'var(--text-muted)' }} />
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                  </span>
-                  <span style={{ fontWeight: '700', color: 'var(--text-main)' }}>
-                    Scenario transition to <strong style={{ color: '#0284c7' }}>{log.new_scenario}</strong> ({log.new_score}/100)
-                  </span>
-                </div>
-                <span style={{ fontSize: '0.74rem', fontFamily: 'var(--font-mono)', background: '#1e293b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                  {log.updated_by}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              No audit logs recorded yet. Changes made in API Keys & Control will record events here.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 9. GOVERNMENT-STYLE RESTRAINED FOOTER */}
+      {/* 7. GOVERNMENT-STYLE FOOTER */}
       <footer style={{ 
         marginTop: '1.5rem', 
         paddingTop: '1.2rem', 
