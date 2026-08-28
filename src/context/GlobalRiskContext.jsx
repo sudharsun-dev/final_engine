@@ -9,17 +9,18 @@ export const GlobalRiskProvider = ({ children }) => {
   const { currentUser } = useAuth();
   const [controlState, setControlState] = useState(SCENARIOS.LOW);
   const [connectionStatus, setConnectionStatus] = useState('POLLING');
+  const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured ? 'SYNCED' : 'UNCONFIGURED');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState(null);
 
   const isMountedRef = useRef(true);
 
-  // Apply server-confirmed database state to React global state
+  // Apply confirmed database state to React global state
   const applyControlState = useCallback((row) => {
     if (!row || !row.scenario) return;
 
     setControlState((prev) => {
-      // Check if values actually changed before logging and updating
+      // Avoid redundant re-render if database state hasn't changed
       if (
         prev.scenario === row.scenario &&
         Number(prev.risk_score) === Number(row.risk_score) &&
@@ -30,9 +31,10 @@ export const GlobalRiskProvider = ({ children }) => {
         return prev;
       }
 
-      console.log(`[GLOBAL-RISK] POLL detected change: ${prev.scenario} -> ${row.scenario} (${prev.risk_score} -> ${row.risk_score})`);
+      console.log(`[GLOBAL-RISK] poll detected change: ${prev.scenario} -> ${row.scenario} (${prev.risk_score} -> ${row.risk_score})`);
+      console.log('[GLOBAL-RISK] UI synchronized');
 
-      const next = {
+      return {
         scenario: row.scenario,
         risk_score: Number(row.risk_score) || 15,
         synthetic_probability: Number(row.synthetic_probability) || 15,
@@ -43,29 +45,34 @@ export const GlobalRiskProvider = ({ children }) => {
         updated_by: row.updated_by || 'Presenter',
         updated_at: row.updated_at || new Date().toISOString()
       };
-
-      return next;
     });
   }, []);
 
-  // Single Application-Level Polling Loop (1000ms)
+  // Single Application-Level 1000ms Polling Loop
   useEffect(() => {
     isMountedRef.current = true;
 
     const pollDatabase = async () => {
+      if (!isSupabaseConfigured) {
+        setConnectionStatus('UNCONFIGURED');
+        setSyncStatus('UNCONFIGURED');
+        return;
+      }
+
       const row = await fetchCurrentGlobalRisk();
       if (isMountedRef.current) {
         if (row) {
           setConnectionStatus('CONNECTED');
+          // Only update syncStatus to SYNCED if there isn't an active write error
+          setSyncStatus((prev) => (prev === 'SYNCING' ? prev : 'SYNCED'));
           applyControlState(row);
         } else {
-          // Retain last confirmed state on failed request
           setConnectionStatus('CONNECTED');
         }
       }
     };
 
-    // Application startup initial fetch
+    console.log('[GLOBAL-RISK] initial fetch');
     pollDatabase();
 
     // 1000ms continuous polling loop
@@ -77,27 +84,33 @@ export const GlobalRiskProvider = ({ children }) => {
     };
   }, [applyControlState]);
 
-  // Presenter Scenario Update (Executes POST / update and waits for server response)
+  // Presenter Update Method (Waits for database response before updating UI)
   const updateScenario = async (targetScenarioKey) => {
     if (!SCENARIOS[targetScenarioKey]) return;
 
     const updatedBy = currentUser?.full_name || 'Presenter';
     setIsUpdating(true);
+    setSyncStatus('SYNCING');
     setUpdateError(null);
 
     try {
       const result = await updateGlobalRiskScenario(targetScenarioKey, updatedBy);
+
       if (result.success && result.data) {
-        // Update global React state ONLY after confirmed server response
+        // Successful database write: update React state and set status = SYNCED
+        setSyncStatus('SYNCED');
+        setUpdateError(null);
         applyControlState(result.data);
       } else {
-        const errMsg = result.error || 'Update failed';
-        console.error('[GLOBAL-RISK ERROR] Update failed:', errMsg);
+        // Failed database write: set status = ERROR and show error message
+        const errMsg = result.error || 'Database update failed';
+        setSyncStatus('ERROR');
         setUpdateError(errMsg);
       }
     } catch (err) {
-      console.error('[GLOBAL-RISK ERROR] Update exception:', err);
-      setUpdateError(err.message || 'Database error');
+      const errMsg = err.message || 'Database error';
+      setSyncStatus('ERROR');
+      setUpdateError(errMsg);
     } finally {
       if (isMountedRef.current) {
         setIsUpdating(false);
@@ -117,6 +130,7 @@ export const GlobalRiskProvider = ({ children }) => {
     updatedAt: controlState.updated_at,
     realtimeStatus: connectionStatus,
     connectionStatus,
+    syncStatus,
     isUpdating,
     updateError,
     updateScenario,

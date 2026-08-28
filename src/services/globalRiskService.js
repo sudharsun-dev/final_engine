@@ -30,36 +30,10 @@ export const SCENARIOS = {
   }
 };
 
-const apiBaseUrl = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_API_BASE_URL : '';
-
 /**
- * GET current global risk state (via VITE_API_BASE_URL or direct Supabase)
+ * Fetch current system2_global_risk row (id = 1) from Supabase
  */
 export async function fetchCurrentGlobalRisk() {
-  console.log('[GLOBAL-RISK] GET started');
-
-  // Option A: Custom Backend API if VITE_API_BASE_URL is defined
-  if (apiBaseUrl) {
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/v1/system2/global-risk`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!res.ok) {
-        const bodyText = await res.text();
-        console.error('[GLOBAL-RISK ERROR] GET failed:', { status: res.status, body: bodyText });
-        return null;
-      }
-      const data = await res.json();
-      console.log('[GLOBAL-RISK] GET success:', data);
-      return data;
-    } catch (err) {
-      console.error('[GLOBAL-RISK ERROR] GET fetch exception:', err.message || err);
-      return null;
-    }
-  }
-
-  // Option B: Direct Supabase REST query on public.system2_global_risk (row id = 1)
   if (!isSupabaseConfigured || !supabase) {
     return null;
   }
@@ -72,56 +46,60 @@ export async function fetchCurrentGlobalRisk() {
       .single();
 
     if (error) {
-      console.error('[GLOBAL-RISK ERROR] Supabase GET query failed:', error.message);
+      if (error.code === 'PGRST116') {
+        console.warn('[GLOBAL-RISK] Row id=1 missing in database table public.system2_global_risk');
+      } else {
+        console.error('[GLOBAL-RISK] FETCH FAILED', {
+          error_message: error.message,
+          error_code: error.code,
+          error_details: error.details,
+          error_hint: error.hint
+        });
+      }
       return null;
     }
 
-    console.log('[GLOBAL-RISK] GET success:', data);
     return data;
   } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Supabase GET exception:', err.message || err);
+    console.error('[GLOBAL-RISK] FETCH EXCEPTION', err.message || err);
     return null;
   }
 }
 
 /**
- * POST / UPDATE global risk scenario (row id = 1)
+ * Update global risk scenario in Supabase system2_global_risk table (row id = 1)
+ * Executes atomic upsert query: .upsert({...}, { onConflict: 'id' }).select().single()
  */
 export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'Presenter') {
   const scenarioData = SCENARIOS[targetScenarioKey];
   if (!scenarioData) {
-    console.error(`[GLOBAL-RISK ERROR] Invalid scenario key: ${targetScenarioKey}`);
-    return { success: false, error: 'Invalid scenario' };
+    return { success: false, error: 'Invalid scenario key' };
   }
 
-  console.log(`[GLOBAL-RISK] POST started: ${targetScenarioKey}`);
+  let urlOrigin = 'UNCONFIGURED';
+  try {
+    const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+    if (env.VITE_SUPABASE_URL) urlOrigin = new URL(env.VITE_SUPABASE_URL).origin;
+  } catch (e) {}
 
-  // Option A: Custom Backend API if VITE_API_BASE_URL is defined
-  if (apiBaseUrl) {
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/v1/system2/global-risk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ scenario: targetScenarioKey })
-      });
-      if (!res.ok) {
-        const bodyText = await res.text();
-        console.error('[GLOBAL-RISK ERROR] POST failed:', { status: res.status, body: bodyText });
-        return { success: false, error: `HTTP ${res.status}: ${bodyText}` };
-      }
-      const data = await res.json();
-      console.log('[GLOBAL-RISK] POST success:', data);
-      return { success: true, data };
-    } catch (err) {
-      console.error('[GLOBAL-RISK ERROR] POST exception:', err.message || err);
-      return { success: false, error: err.message || 'POST failed' };
-    }
-  }
+  console.log('[GLOBAL-RISK]', {
+    action: 'UPDATE',
+    scenario: targetScenarioKey,
+    supabase_url: urlOrigin,
+    table: 'system2_global_risk'
+  });
 
-  // Option B: Direct Supabase REST update on public.system2_global_risk (row id = 1)
   if (!isSupabaseConfigured || !supabase) {
-    console.error('[GLOBAL-RISK ERROR] Cannot update database: Supabase unconfigured');
-    return { success: false, error: 'Supabase unconfigured' };
+    console.error('[GLOBAL-RISK] UPDATE FAILED', {
+      error_message: 'Supabase credentials missing in environment variables (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)',
+      error_code: 'UNCONFIGURED_ENV',
+      error_details: 'Build-time environment variables not set in Vercel Settings',
+      error_hint: 'Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel project settings and rebuild.'
+    });
+    return {
+      success: false,
+      error: 'Supabase unconfigured: Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel settings.'
+    };
   }
 
   const updatePayload = {
@@ -135,36 +113,32 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
     const { data, error } = await supabase
       .from('system2_global_risk')
       .upsert(updatePayload, { onConflict: 'id' })
-      .select();
+      .select()
+      .single();
 
     if (error) {
-      console.error('[GLOBAL-RISK ERROR] Supabase update failed:', error.message);
-      return { success: false, error: error.message };
+      console.error('[GLOBAL-RISK] UPDATE FAILED', {
+        error_message: error.message,
+        error_code: error.code,
+        error_details: error.details,
+        error_hint: error.hint
+      });
+      return { success: false, error: error.message || 'Database write failed' };
     }
 
-    const updatedRow = Array.isArray(data) && data.length > 0 ? data[0] : updatePayload;
-    console.log('[GLOBAL-RISK] POST success:', updatedRow);
-
-    // Write log entry to system2_audit_log asynchronously
-    supabase
-      .from('system2_audit_log')
-      .insert({
-        previous_scenario: 'N/A',
-        new_scenario: updatedRow.scenario,
-        previous_score: 0,
-        new_score: updatedRow.risk_score,
-        action: updatedRow.recommended_action,
-        updated_by: updatedBy,
-        timestamp: new Date().toISOString()
-      })
-      .then(({ error: auditErr }) => {
-        if (auditErr) console.warn('[GLOBAL-RISK] Audit log notice:', auditErr.message);
-      });
-
-    return { success: true, data: updatedRow };
+    console.log('[GLOBAL-RISK] UPDATE SUCCESS', data);
+    return { success: true, data };
   } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Supabase update exception:', err.message || err);
-    return { success: false, error: err.message || 'Update failed' };
+    console.error('[GLOBAL-RISK] UPDATE FAILED', {
+      error_message: err.message || 'TypeError: Failed to fetch',
+      error_code: 'FETCH_ERROR',
+      error_details: err.name || 'Network/CORS/Configuration Error',
+      error_hint: 'Verify VITE_SUPABASE_URL is valid and reachable from client browser.'
+    });
+    return {
+      success: false,
+      error: err.message || 'TypeError: Failed to fetch (Check VITE_SUPABASE_URL in Vercel settings)'
+    };
   }
 }
 

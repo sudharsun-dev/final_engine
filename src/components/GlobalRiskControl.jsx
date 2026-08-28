@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGlobalRisk } from '../hooks/useGlobalRisk';
-import { RefreshCw, CheckCircle2, AlertCircle, Sliders } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Sliders, AlertTriangle } from 'lucide-react';
 
 export const GlobalRiskControl = ({ compact = false }) => {
   const { 
@@ -9,6 +9,7 @@ export const GlobalRiskControl = ({ compact = false }) => {
     updatedAt, 
     isUpdating, 
     updateError, 
+    syncStatus,
     updateScenario, 
     isConfigured 
   } = useGlobalRisk();
@@ -18,30 +19,61 @@ export const GlobalRiskControl = ({ compact = false }) => {
     updateScenario(newScenario);
   };
 
+  const renderStatusBadge = () => {
+    if (isUpdating || syncStatus === 'SYNCING') {
+      return (
+        <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}>
+          <RefreshCw size={13} className="spin" /> SYNCING...
+        </span>
+      );
+    }
+    if (updateError || syncStatus === 'ERROR') {
+      return (
+        <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}>
+          <AlertCircle size={13} /> ERROR (WRITE FAILED)
+        </span>
+      );
+    }
+    if (!isConfigured) {
+      return (
+        <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}>
+          <AlertTriangle size={13} /> UNCONFIGURED (.ENV)
+        </span>
+      );
+    }
+    return (
+      <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}>
+        <CheckCircle2 size={13} /> SYNCED
+      </span>
+    );
+  };
+
   return (
-    <div className="card" style={{ background: '#0b132b', color: '#ffffff', borderColor: '#1e293b', padding: '1.1rem 1.25rem' }}>
+    <div className="card" style={{ background: '#0b132b', color: '#ffffff', borderColor: updateError ? '#ef4444' : '#1e293b', padding: '1.1rem 1.25rem' }}>
       <div className="card-header" style={{ borderBottomColor: '#1e293b', marginBottom: '0.85rem', paddingBottom: '0.6rem' }}>
         <h3 className="card-title" style={{ color: '#ffffff', fontSize: '0.95rem' }}>
           <Sliders size={16} style={{ color: '#38bdf8' }} />
           GLOBAL RISK SCENARIO
         </h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-          {isUpdating ? (
-            <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <RefreshCw size={13} className="spin" /> UPDATING...
-            </span>
-          ) : (
-            <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <CheckCircle2 size={13} /> SYNCED
-            </span>
-          )}
+          {renderStatusBadge()}
         </div>
       </div>
 
+      {!isConfigured && (
+        <div className="alert-banner warning" style={{ marginBottom: '0.8rem', padding: '0.6rem 0.9rem', fontSize: '0.82rem', background: '#451a03', borderColor: '#b45309', color: '#fde68a' }}>
+          <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+          <span>VITE_SUPABASE_URL is unconfigured. Please set build-time environment variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel project settings and rebuild.</span>
+        </div>
+      )}
+
       {updateError && (
-        <div className="alert-banner error" style={{ marginBottom: '0.8rem', padding: '0.5rem 0.8rem', fontSize: '0.8rem' }}>
-          <AlertCircle size={14} />
-          <span>Error updating database: {updateError}</span>
+        <div className="alert-banner error" style={{ marginBottom: '0.8rem', padding: '0.6rem 0.9rem', fontSize: '0.82rem', background: '#450a0a', borderColor: '#991b1b', color: '#fca5a5' }}>
+          <AlertCircle size={15} style={{ flexShrink: 0 }} />
+          <div>
+            <strong style={{ display: 'block', marginBottom: '0.1rem' }}>Database Write Error:</strong>
+            <span>{updateError}</span>
+          </div>
         </div>
       )}
 
@@ -87,7 +119,7 @@ export const GlobalRiskControl = ({ compact = false }) => {
         color: '#64748b',
         fontFamily: 'var(--font-mono)'
       }}>
-        <span>GLOBAL GATEWAY: <strong style={{ color: '#22c55e' }}>CONNECTED</strong></span>
+        <span>DATABASE: <strong style={{ color: isConfigured ? '#22c55e' : '#f59e0b' }}>{isConfigured ? 'CONNECTED' : 'UNCONFIGURED'}</strong></span>
         <span>CURRENT STATE: <strong style={{ color: '#38bdf8' }}>{scenario} ({riskScore}/100)</strong></span>
         <span>LAST UPDATED: <strong style={{ color: '#94a3b8' }}>{updatedAt ? new Date(updatedAt).toLocaleTimeString() : 'N/A'}</strong></span>
       </div>
