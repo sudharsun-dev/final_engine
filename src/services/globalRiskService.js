@@ -32,16 +32,10 @@ export const SCENARIOS = {
 
 /**
  * Fetch current system2_global_risk row (id = 1) from Supabase
+ * Strictly queries database row id=1. No local storage overrides.
  */
 export async function fetchCurrentGlobalRisk() {
   if (!isSupabaseConfigured || !supabase) {
-    try {
-      const stored = localStorage.getItem('system2_global_risk_sync');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && parsed.data) return parsed.data;
-      }
-    } catch (e) {}
     return null;
   }
 
@@ -54,23 +48,23 @@ export async function fetchCurrentGlobalRisk() {
 
     if (error) {
       if (error.code === 'PGRST116') {
-        console.log('[SUPABASE POLL] Row id=1 missing, returning null for auto-upsert on write');
+        console.warn('[GLOBAL-RISK] Row id=1 missing in database table public.system2_global_risk');
       } else {
-        console.warn('[SUPABASE POLL WARNING]', error.message);
+        console.error('[GLOBAL-RISK ERROR] Database fetch error:', error.message);
       }
       return null;
     }
 
     return data;
   } catch (err) {
-    console.warn('[SUPABASE POLL EXCEPTION]', err.message || err);
+    console.error('[GLOBAL-RISK ERROR] Fetch exception:', err.message || err);
     return null;
   }
 }
 
 /**
  * Update global risk scenario in Supabase system2_global_risk table (row id = 1)
- * Uses atomic upsert so row id=1 is created if missing or updated if present.
+ * Updates database row id=1 directly. Waits for DB response before returned.
  */
 export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'Presenter') {
   const scenarioData = SCENARIOS[targetScenarioKey];
@@ -85,36 +79,25 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
     updated_at: new Date().toISOString()
   };
 
-  // Broadcast to other local browser tabs/windows
-  try {
-    const syncObj = { type: 'SCENARIO_UPDATE', data: updatePayload, timestamp: Date.now() };
-    localStorage.setItem('system2_global_risk_sync', JSON.stringify(syncObj));
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      const bc = new BroadcastChannel('system2_global_risk_channel');
-      bc.postMessage(syncObj);
-      bc.close();
-    }
-  } catch (e) {}
-
   if (!isSupabaseConfigured || !supabase) {
-    console.log('[SUPABASE UPDATE] Unconfigured environment, local update executed:', targetScenarioKey);
-    return { success: true, data: updatePayload };
+    console.warn('[GLOBAL-RISK ERROR] Cannot update database: Supabase unconfigured');
+    return { success: false, error: 'Supabase unconfigured' };
   }
 
   try {
-    console.log(`[SUPABASE UPDATE] Atomic UPSERT for scenario: ${targetScenarioKey}`);
+    console.log(`[GLOBAL-RISK] update started: ${targetScenarioKey}`);
     const { data, error } = await supabase
       .from('system2_global_risk')
       .upsert(updatePayload, { onConflict: 'id' })
       .select();
 
     if (error) {
-      console.error('[SUPABASE UPDATE ERROR]', error.message);
+      console.error('[GLOBAL-RISK ERROR] Update failed:', error.message);
       return { success: false, error: error.message };
     }
 
     const updatedRow = Array.isArray(data) && data.length > 0 ? data[0] : updatePayload;
-    console.log('[SUPABASE UPDATE SUCCESS]', updatedRow);
+    console.log('[GLOBAL-RISK] update success:', updatedRow);
 
     // Asynchronously log to system2_audit_log
     supabase
@@ -129,12 +112,12 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
         timestamp: new Date().toISOString()
       })
       .then(({ error: auditErr }) => {
-        if (auditErr) console.warn('[SUPABASE AUDIT WARNING]', auditErr.message);
+        if (auditErr) console.warn('[GLOBAL-RISK] Audit log notice:', auditErr.message);
       });
 
     return { success: true, data: updatedRow };
   } catch (err) {
-    console.error('[SUPABASE UPDATE EXCEPTION]', err.message || err);
+    console.error('[GLOBAL-RISK ERROR] Update exception:', err.message || err);
     return { success: false, error: err.message || 'Update failed' };
   }
 }

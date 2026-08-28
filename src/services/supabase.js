@@ -4,19 +4,9 @@ const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.met
 const supabaseUrl = env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || '';
 
-let urlHost = 'NOT SET';
-try {
-  if (supabaseUrl) {
-    urlHost = new URL(supabaseUrl).hostname;
-  }
-} catch (e) {
-  urlHost = 'INVALID URL (' + supabaseUrl + ')';
-}
-
 console.log('[SUPABASE CONFIG]', {
   urlConfigured: Boolean(supabaseUrl),
-  anonKeyConfigured: Boolean(supabaseAnonKey),
-  urlHost
+  keyConfigured: Boolean(supabaseAnonKey)
 });
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);

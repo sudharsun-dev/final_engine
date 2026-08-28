@@ -14,11 +14,12 @@ export const GlobalRiskProvider = ({ children }) => {
 
   const isMountedRef = useRef(true);
 
-  // Apply state update safely
+  // Apply confirmed database row to React global state
   const applyControlState = useCallback((row) => {
     if (!row || !row.scenario) return;
 
     setControlState((prev) => {
+      // If server state is identical, do not trigger redundant state update
       if (
         prev.scenario === row.scenario &&
         Number(prev.risk_score) === Number(row.risk_score) &&
@@ -29,8 +30,11 @@ export const GlobalRiskProvider = ({ children }) => {
         return prev;
       }
 
-      console.log(`[SYSTEM 2 STATE] Global Risk Synchronized: ${row.scenario} (${row.risk_score}/100)`);
-      return {
+      console.log(`[GLOBAL-RISK] poll detected change`);
+      console.log(`  ${prev.scenario} -> ${row.scenario}`);
+      console.log(`  ${prev.risk_score} -> ${row.risk_score}`);
+
+      const next = {
         scenario: row.scenario,
         risk_score: Number(row.risk_score) || 15,
         synthetic_probability: Number(row.synthetic_probability) || 15,
@@ -41,68 +45,48 @@ export const GlobalRiskProvider = ({ children }) => {
         updated_by: row.updated_by || 'Presenter',
         updated_at: row.updated_at || new Date().toISOString()
       };
+
+      console.log('[GLOBAL-RISK] UI synchronized:', next);
+      return next;
     });
   }, []);
 
-  // 1000ms Polling Loop & BroadcastChannel / Storage Listener
+  // Application-Level 1000ms Polling Loop
   useEffect(() => {
     isMountedRef.current = true;
 
-    // BroadcastChannel listener for 0ms multi-tab/multi-window local sync
-    let bc = null;
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      bc = new BroadcastChannel('system2_global_risk_channel');
-      bc.onmessage = (event) => {
-        if (event.data && event.data.type === 'SCENARIO_UPDATE' && event.data.data) {
-          applyControlState(event.data.data);
-        }
-      };
-    }
-
-    // Storage event listener fallback
-    const handleStorageChange = (e) => {
-      if (e.key === 'system2_global_risk_sync' && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (parsed && parsed.data) {
-            applyControlState(parsed.data);
-          }
-        } catch (err) {}
-      }
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', handleStorageChange);
-    }
-
     const pollDatabase = async () => {
+      if (!isSupabaseConfigured) {
+        setConnectionStatus('UNCONFIGURED');
+        return;
+      }
+
       const row = await fetchCurrentGlobalRisk();
       if (isMountedRef.current) {
         if (row) {
           setConnectionStatus('CONNECTED');
           applyControlState(row);
         } else {
-          setConnectionStatus(isSupabaseConfigured ? 'CONNECTED' : 'LOCAL');
+          // If request fails, retain last confirmed state
+          setConnectionStatus('CONNECTED');
         }
       }
     };
 
-    // Initial fetch on mount
+    console.log('[GLOBAL-RISK] initial fetch');
+    // Initial fetch on application startup
     pollDatabase();
 
-    // 1000ms polling interval
+    // Poll every 1000ms continuously across all pages
     const intervalId = setInterval(pollDatabase, 1000);
 
     return () => {
       isMountedRef.current = false;
       clearInterval(intervalId);
-      if (bc) bc.close();
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', handleStorageChange);
-      }
     };
   }, [applyControlState]);
 
-  // Presenter Update Function
+  // Presenter Update Method (Waits for database write completion before updating UI)
   const updateScenario = async (targetScenarioKey) => {
     if (!SCENARIOS[targetScenarioKey]) return;
 
@@ -110,22 +94,25 @@ export const GlobalRiskProvider = ({ children }) => {
     setIsUpdating(true);
     setUpdateError(null);
 
-    // 0ms Optimistic UI update
-    applyControlState({
-      ...SCENARIOS[targetScenarioKey],
-      updated_by: updatedBy,
-      updated_at: new Date().toISOString()
-    });
+    console.log(`[GLOBAL-RISK] update started: ${targetScenarioKey}`);
 
     try {
+      // 1. Send update to Supabase database (row id = 1)
       const result = await updateGlobalRiskScenario(targetScenarioKey, updatedBy);
+
       if (result.success && result.data) {
+        // 2. ONLY after successful database write response, update local React state
+        console.log('[GLOBAL-RISK] update success:', result.data);
         applyControlState(result.data);
-      } else if (result.error) {
-        setUpdateError(result.error);
+      } else {
+        // 3. If database update fails: keep previous confirmed state & display error
+        const errMsg = result.error || 'Database write failed';
+        console.error('[GLOBAL-RISK ERROR] Update failed:', errMsg);
+        setUpdateError(errMsg);
       }
     } catch (err) {
-      setUpdateError(err.message || 'Update failed');
+      console.error('[GLOBAL-RISK ERROR] Update exception:', err);
+      setUpdateError(err.message || 'Database error');
     } finally {
       if (isMountedRef.current) {
         setIsUpdating(false);
