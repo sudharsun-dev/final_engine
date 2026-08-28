@@ -6,7 +6,7 @@ export const SCENARIOS = {
     risk_score: 15,
     synthetic_probability: 15,
     authenticity: 85,
-    confidence: 92,
+    confidence: 93,
     risk_level: 'LOW',
     recommended_action: 'CONTINUE'
   },
@@ -15,7 +15,7 @@ export const SCENARIOS = {
     risk_score: 55,
     synthetic_probability: 55,
     authenticity: 45,
-    confidence: 92,
+    confidence: 94,
     risk_level: 'MEDIUM',
     recommended_action: 'VERIFY'
   },
@@ -31,17 +31,14 @@ export const SCENARIOS = {
 };
 
 /**
- * Fetch current system2_global_risk row (id = 1) from Supabase
- * Initial database read MUST NOT write to the database.
+ * Fetch current system2_global_risk row (id = 1) from Supabase database
  */
 export async function fetchCurrentGlobalRisk() {
   if (!isSupabaseConfigured || !supabase) {
-    console.log('[SUPABASE FETCH] Unconfigured environment, returning local default state');
-    return SCENARIOS.LOW;
+    return null;
   }
 
   try {
-    console.log('[SUPABASE FETCH] SELECT * FROM system2_global_risk WHERE id = 1');
     const { data, error } = await supabase
       .from('system2_global_risk')
       .select('*')
@@ -49,19 +46,14 @@ export async function fetchCurrentGlobalRisk() {
       .single();
 
     if (error) {
-      console.error('[SUPABASE FETCH ERROR]', error);
-      return SCENARIOS.LOW;
+      console.warn('[SUPABASE POLL WARNING] Fetch failed:', error.message);
+      return null;
     }
 
-    console.log('[SUPABASE FETCH SUCCESS]', data);
     return data;
   } catch (err) {
-    console.error('[SUPABASE FETCH ERROR] Exception during fetch:', {
-      message: err.message,
-      name: err.name,
-      stack: err.stack
-    });
-    return SCENARIOS.LOW;
+    console.warn('[SUPABASE POLL WARNING] Exception during fetch:', err.message || err);
+    return null;
   }
 }
 
@@ -71,7 +63,6 @@ export async function fetchCurrentGlobalRisk() {
 export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'Presenter') {
   const scenarioData = SCENARIOS[targetScenarioKey];
   if (!scenarioData) {
-    console.error(`[SUPABASE UPDATE ERROR] Invalid scenario key: ${targetScenarioKey}`);
     return { success: false, error: 'Invalid scenario' };
   }
 
@@ -82,12 +73,10 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
   };
 
   if (!isSupabaseConfigured || !supabase) {
-    console.log('[SUPABASE UPDATE] Unconfigured environment, simulated local update:', targetScenarioKey);
     return { success: true, data: updatePayload };
   }
 
   try {
-    console.log(`[SUPABASE UPDATE] UPDATE system2_global_risk SET scenario='${targetScenarioKey}' WHERE id=1`);
     const { data, error } = await supabase
       .from('system2_global_risk')
       .update(updatePayload)
@@ -96,18 +85,11 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
       .single();
 
     if (error) {
-      console.error('[SUPABASE UPDATE ERROR]', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
-      return { success: false, error: error.message || 'Database update failed' };
+      console.error('[SUPABASE UPDATE ERROR]', error.message);
+      return { success: false, error: error.message };
     }
 
-    console.log('[SUPABASE UPDATE SUCCESS]', data);
-
-    // Asynchronously log to system2_audit_log
+    // Asynchronously insert log into system2_audit_log
     supabase
       .from('system2_audit_log')
       .insert({
@@ -120,18 +102,13 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
         timestamp: new Date().toISOString()
       })
       .then(({ error: auditErr }) => {
-        if (auditErr) console.warn('[SUPABASE UPDATE] Audit log notice:', auditErr.message);
+        if (auditErr) console.warn('[SUPABASE AUDIT WARNING]', auditErr.message);
       });
 
     return { success: true, data };
   } catch (err) {
-    console.error('[SUPABASE UPDATE ERROR]', {
-      message: err.message,
-      name: err.name,
-      stack: err.stack,
-      hint: 'If TypeError: Failed to fetch occurs, check VITE_SUPABASE_URL network connection or CORS configuration.'
-    });
-    return { success: false, error: err.message || 'Failed to fetch' };
+    console.error('[SUPABASE UPDATE ERROR] Exception during update:', err.message || err);
+    return { success: false, error: err.message || 'Update failed' };
   }
 }
 
@@ -150,7 +127,6 @@ export async function fetchAuditLogs(limit = 20) {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    console.error('[SUPABASE FETCH ERROR] Failed to fetch audit logs:', err.message || err);
     return [];
   }
 }
