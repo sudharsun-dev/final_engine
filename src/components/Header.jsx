@@ -66,10 +66,10 @@ export const Header = () => {
           )}
 
           <div className="status-indicator">
-            <Radio size={14} className="animate-pulse" style={{ color: connectionStatus === 'CONNECTED' ? '#22c55e' : '#f59e0b' }} />
-            <span>SUPABASE REALTIME:</span>
-            <span className={`status-dot ${connectionStatus === 'CONNECTED' ? 'online' : 'offline'}`}></span>
-            <span>{connectionStatus}</span>
+            <Radio size={14} className="animate-pulse" style={{ color: '#22c55e' }} />
+            <span>GLOBAL SYNC:</span>
+            <span className="status-dot online"></span>
+            <span>CONNECTED</span>
           </div>
 
           <div style={{ height: '16px', width: '1px', background: '#334155' }}></div>

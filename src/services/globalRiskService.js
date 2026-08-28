@@ -30,11 +30,36 @@ export const SCENARIOS = {
   }
 };
 
+const apiBaseUrl = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_API_BASE_URL : '';
+
 /**
- * Fetch current system2_global_risk row (id = 1) from Supabase
- * Strictly queries database row id=1. No local storage overrides.
+ * GET current global risk state (via VITE_API_BASE_URL or direct Supabase)
  */
 export async function fetchCurrentGlobalRisk() {
+  console.log('[GLOBAL-RISK] GET started');
+
+  // Option A: Custom Backend API if VITE_API_BASE_URL is defined
+  if (apiBaseUrl) {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/v1/system2/global-risk`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) {
+        const bodyText = await res.text();
+        console.error('[GLOBAL-RISK ERROR] GET failed:', { status: res.status, body: bodyText });
+        return null;
+      }
+      const data = await res.json();
+      console.log('[GLOBAL-RISK] GET success:', data);
+      return data;
+    } catch (err) {
+      console.error('[GLOBAL-RISK ERROR] GET fetch exception:', err.message || err);
+      return null;
+    }
+  }
+
+  // Option B: Direct Supabase REST query on public.system2_global_risk (row id = 1)
   if (!isSupabaseConfigured || !supabase) {
     return null;
   }
@@ -47,29 +72,56 @@ export async function fetchCurrentGlobalRisk() {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        console.warn('[GLOBAL-RISK] Row id=1 missing in database table public.system2_global_risk');
-      } else {
-        console.error('[GLOBAL-RISK ERROR] Database fetch error:', error.message);
-      }
+      console.error('[GLOBAL-RISK ERROR] Supabase GET query failed:', error.message);
       return null;
     }
 
+    console.log('[GLOBAL-RISK] GET success:', data);
     return data;
   } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Fetch exception:', err.message || err);
+    console.error('[GLOBAL-RISK ERROR] Supabase GET exception:', err.message || err);
     return null;
   }
 }
 
 /**
- * Update global risk scenario in Supabase system2_global_risk table (row id = 1)
- * Updates database row id=1 directly. Waits for DB response before returned.
+ * POST / UPDATE global risk scenario (row id = 1)
  */
 export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'Presenter') {
   const scenarioData = SCENARIOS[targetScenarioKey];
   if (!scenarioData) {
+    console.error(`[GLOBAL-RISK ERROR] Invalid scenario key: ${targetScenarioKey}`);
     return { success: false, error: 'Invalid scenario' };
+  }
+
+  console.log(`[GLOBAL-RISK] POST started: ${targetScenarioKey}`);
+
+  // Option A: Custom Backend API if VITE_API_BASE_URL is defined
+  if (apiBaseUrl) {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/v1/system2/global-risk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ scenario: targetScenarioKey })
+      });
+      if (!res.ok) {
+        const bodyText = await res.text();
+        console.error('[GLOBAL-RISK ERROR] POST failed:', { status: res.status, body: bodyText });
+        return { success: false, error: `HTTP ${res.status}: ${bodyText}` };
+      }
+      const data = await res.json();
+      console.log('[GLOBAL-RISK] POST success:', data);
+      return { success: true, data };
+    } catch (err) {
+      console.error('[GLOBAL-RISK ERROR] POST exception:', err.message || err);
+      return { success: false, error: err.message || 'POST failed' };
+    }
+  }
+
+  // Option B: Direct Supabase REST update on public.system2_global_risk (row id = 1)
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('[GLOBAL-RISK ERROR] Cannot update database: Supabase unconfigured');
+    return { success: false, error: 'Supabase unconfigured' };
   }
 
   const updatePayload = {
@@ -79,27 +131,21 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
     updated_at: new Date().toISOString()
   };
 
-  if (!isSupabaseConfigured || !supabase) {
-    console.warn('[GLOBAL-RISK ERROR] Cannot update database: Supabase unconfigured');
-    return { success: false, error: 'Supabase unconfigured' };
-  }
-
   try {
-    console.log(`[GLOBAL-RISK] update started: ${targetScenarioKey}`);
     const { data, error } = await supabase
       .from('system2_global_risk')
       .upsert(updatePayload, { onConflict: 'id' })
       .select();
 
     if (error) {
-      console.error('[GLOBAL-RISK ERROR] Update failed:', error.message);
+      console.error('[GLOBAL-RISK ERROR] Supabase update failed:', error.message);
       return { success: false, error: error.message };
     }
 
     const updatedRow = Array.isArray(data) && data.length > 0 ? data[0] : updatePayload;
-    console.log('[GLOBAL-RISK] update success:', updatedRow);
+    console.log('[GLOBAL-RISK] POST success:', updatedRow);
 
-    // Asynchronously log to system2_audit_log
+    // Write log entry to system2_audit_log asynchronously
     supabase
       .from('system2_audit_log')
       .insert({
@@ -117,7 +163,7 @@ export async function updateGlobalRiskScenario(targetScenarioKey, updatedBy = 'P
 
     return { success: true, data: updatedRow };
   } catch (err) {
-    console.error('[GLOBAL-RISK ERROR] Update exception:', err.message || err);
+    console.error('[GLOBAL-RISK ERROR] Supabase update exception:', err.message || err);
     return { success: false, error: err.message || 'Update failed' };
   }
 }

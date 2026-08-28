@@ -14,12 +14,12 @@ export const GlobalRiskProvider = ({ children }) => {
 
   const isMountedRef = useRef(true);
 
-  // Apply confirmed database row to React global state
+  // Apply server-confirmed database state to React global state
   const applyControlState = useCallback((row) => {
     if (!row || !row.scenario) return;
 
     setControlState((prev) => {
-      // If server state is identical, do not trigger redundant state update
+      // Check if values actually changed before logging and updating
       if (
         prev.scenario === row.scenario &&
         Number(prev.risk_score) === Number(row.risk_score) &&
@@ -30,9 +30,7 @@ export const GlobalRiskProvider = ({ children }) => {
         return prev;
       }
 
-      console.log(`[GLOBAL-RISK] poll detected change`);
-      console.log(`  ${prev.scenario} -> ${row.scenario}`);
-      console.log(`  ${prev.risk_score} -> ${row.risk_score}`);
+      console.log(`[GLOBAL-RISK] POLL detected change: ${prev.scenario} -> ${row.scenario} (${prev.risk_score} -> ${row.risk_score})`);
 
       const next = {
         scenario: row.scenario,
@@ -46,38 +44,31 @@ export const GlobalRiskProvider = ({ children }) => {
         updated_at: row.updated_at || new Date().toISOString()
       };
 
-      console.log('[GLOBAL-RISK] UI synchronized:', next);
       return next;
     });
   }, []);
 
-  // Application-Level 1000ms Polling Loop
+  // Single Application-Level Polling Loop (1000ms)
   useEffect(() => {
     isMountedRef.current = true;
 
     const pollDatabase = async () => {
-      if (!isSupabaseConfigured) {
-        setConnectionStatus('UNCONFIGURED');
-        return;
-      }
-
       const row = await fetchCurrentGlobalRisk();
       if (isMountedRef.current) {
         if (row) {
           setConnectionStatus('CONNECTED');
           applyControlState(row);
         } else {
-          // If request fails, retain last confirmed state
+          // Retain last confirmed state on failed request
           setConnectionStatus('CONNECTED');
         }
       }
     };
 
-    console.log('[GLOBAL-RISK] initial fetch');
-    // Initial fetch on application startup
+    // Application startup initial fetch
     pollDatabase();
 
-    // Poll every 1000ms continuously across all pages
+    // 1000ms continuous polling loop
     const intervalId = setInterval(pollDatabase, 1000);
 
     return () => {
@@ -86,7 +77,7 @@ export const GlobalRiskProvider = ({ children }) => {
     };
   }, [applyControlState]);
 
-  // Presenter Update Method (Waits for database write completion before updating UI)
+  // Presenter Scenario Update (Executes POST / update and waits for server response)
   const updateScenario = async (targetScenarioKey) => {
     if (!SCENARIOS[targetScenarioKey]) return;
 
@@ -94,19 +85,13 @@ export const GlobalRiskProvider = ({ children }) => {
     setIsUpdating(true);
     setUpdateError(null);
 
-    console.log(`[GLOBAL-RISK] update started: ${targetScenarioKey}`);
-
     try {
-      // 1. Send update to Supabase database (row id = 1)
       const result = await updateGlobalRiskScenario(targetScenarioKey, updatedBy);
-
       if (result.success && result.data) {
-        // 2. ONLY after successful database write response, update local React state
-        console.log('[GLOBAL-RISK] update success:', result.data);
+        // Update global React state ONLY after confirmed server response
         applyControlState(result.data);
       } else {
-        // 3. If database update fails: keep previous confirmed state & display error
-        const errMsg = result.error || 'Database write failed';
+        const errMsg = result.error || 'Update failed';
         console.error('[GLOBAL-RISK ERROR] Update failed:', errMsg);
         setUpdateError(errMsg);
       }

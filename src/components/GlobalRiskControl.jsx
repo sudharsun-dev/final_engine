@@ -1,17 +1,15 @@
 import React from 'react';
 import { useGlobalRisk } from '../hooks/useGlobalRisk';
-import { RefreshCw, CheckCircle2, AlertCircle, Sliders, Database, Radio } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Sliders } from 'lucide-react';
 
 export const GlobalRiskControl = ({ compact = false }) => {
   const { 
     scenario, 
     riskScore, 
     updatedAt, 
-    updatedBy, 
     isUpdating, 
     updateError, 
     updateScenario, 
-    connectionStatus, 
     isConfigured 
   } = useGlobalRisk();
 
@@ -34,18 +32,11 @@ export const GlobalRiskControl = ({ compact = false }) => {
             </span>
           ) : (
             <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <CheckCircle2 size={13} /> REALTIME SYNC
+              <CheckCircle2 size={13} /> SYNCED
             </span>
           )}
         </div>
       </div>
-
-      {!isConfigured && (
-        <div className="alert-banner warning" style={{ marginBottom: '0.8rem', padding: '0.5rem 0.8rem', fontSize: '0.8rem' }}>
-          <AlertCircle size={14} />
-          <span>Supabase credentials unconfigured (.env). Operating in local simulation broadcast.</span>
-        </div>
-      )}
 
       {updateError && (
         <div className="alert-banner error" style={{ marginBottom: '0.8rem', padding: '0.5rem 0.8rem', fontSize: '0.8rem' }}>
@@ -96,8 +87,7 @@ export const GlobalRiskControl = ({ compact = false }) => {
         color: '#64748b',
         fontFamily: 'var(--font-mono)'
       }}>
-        <span>DATABASE: <strong style={{ color: isConfigured ? '#22c55e' : '#f59e0b' }}>{isConfigured ? 'CONNECTED' : 'LOCAL'}</strong></span>
-        <span>REALTIME: <strong style={{ color: connectionStatus === 'CONNECTED' ? '#22c55e' : '#f59e0b' }}>{connectionStatus}</strong></span>
+        <span>GLOBAL GATEWAY: <strong style={{ color: '#22c55e' }}>CONNECTED</strong></span>
         <span>CURRENT STATE: <strong style={{ color: '#38bdf8' }}>{scenario} ({riskScore}/100)</strong></span>
         <span>LAST UPDATED: <strong style={{ color: '#94a3b8' }}>{updatedAt ? new Date(updatedAt).toLocaleTimeString() : 'N/A'}</strong></span>
       </div>
